@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>テトリス×RPG - Phase Battle v2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+        }
+        #gameContainer { display: flex; gap: 10px; }
+        canvas { border: 3px solid #4a4a6a; border-radius: 5px; }
+        #controls {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="tetrisCanvas" width="400" height="750"></canvas>
+        <canvas id="rpgCanvas" width="320" height="750"></canvas>
+    </div>
+    <div id="controls">
+        [←→] 移動 | [↑] ハードドロップ | [↓] ソフトドロップ | [Space] 回転 | [C] ホールド | [P] ポーズ | [M] ミュート | [Enter] 決定
+    </div>
+
+<script>
+// ============================================================
+// 共通定数・ユーティリティ（各JSファイルから参照される）
+// ============================================================
+
+// バランス定数（すべてここで調整可能）
+const BALANCE = {
+    // === MOVEフェーズ：EXP獲得 ===
+    EXP_PER_LINE: [0, 10, 25, 45, 70],  // 0,1,2,3,4ライン
+    EXP_PER_LOCK: 1,                     // ミノ固定ごと
+
+    // 必要EXP: 72 + 18 * (level - 1)  ← 40%削減
+    BASE_EXP: 72,       // 旧120 → 72
+    EXP_PER_LEVEL: 18,  // 旧30 → 18
+
+    // MOVEの落下速度（ゆるめ・70%低下）
+    MOVE_DROP_INTERVAL: 1714,  // 旧1200 → 1200/0.7=1714ms
+
+    // エンカウントまでの距離（長くしてレベルアップしやすく）
+    ENCOUNTER_DISTANCE: 500,   // さらに延長
+    WALK_SPEED: 35,            // ゆっくり歩く
+
+    // === 移動中イベント ===
+    EVENT_CHECK_INTERVAL: 120, // 120m毎にイベント判定（約3.4秒）
+    EVENT_CHANCE: 0.3,         // 30%でイベント発生（平均約10秒に1回）
+    EVENT_DURATION: 3000,      // イベント表示時間
+
+    // === BATTLE_TETRIS ===
+    BATTLE_TIME: 20000,        // 20秒
+    BATTLE_DROP_INTERVAL: 1143, // 旧800 → 800/0.7=1143ms（70%gravity）
+
+    // バフ換算
+    BUFF_ATK_PER_SCORE: 80,    // 80点ごとに攻撃+1
+    BUFF_DEF_PER_SCORE: 120,   // 120点ごとに防御+1
+    SPECIAL_THRESHOLD: 2000,   // 1000点で必殺ready
+    MAX_BUFF_ATK: 12,
+    MAX_BUFF_DEF: 8,
+
+    // スコア計算
+    SCORE_PER_LINE: [0, 100, 300, 500, 800],
+
+    // === 戦士ステータス ===
+    WARRIOR_BASE_ATK: 10,      // baseATK = 10 + playerLevel
+    WARRIOR_BASE_DEF: 0,       // baseDEF = floor(playerLevel / 2)
+    WARRIOR_ATTACK_INTERVAL: 1200,  // 旧800 → 1200ms（ログを読む時間確保）
+
+    // 必殺ダメージ: 45 + 5*playerLevel + 10*buffATK
+    SPECIAL_BASE_DMG: 45,
+    SPECIAL_LEVEL_BONUS: 5,
+    SPECIAL_BUFF_BONUS: 10,
+
+    // === 敵ステータス ===
+    // enemyHP = 60 + 18*(zone-1) + 8*(playerLevel-1)
+    ENEMY_BASE_HP: 60,
+    ENEMY_HP_PER_ZONE: 18,
+    ENEMY_HP_PER_LEVEL: 8,
+
+    // enemyATK = 6 + 2*(zone-1)
+    ENEMY_BASE_ATK: 6,
+    ENEMY_ATK_PER_ZONE: 2,
+
+    // enemyDEF = 0 + 1*(zone-1)
+    ENEMY_BASE_DEF: 0,
+    ENEMY_DEF_PER_ZONE: 1,
+
+    ENEMY_ATTACK_INTERVAL: 1500,  // 旧1000 → 1500ms（ログを読む時間確保）
+    ZONE_PER_KILLS: 5,            // 5体撃破ごとにzone+1
+
+    // === ダメージ→ゴミ換算 ===
+    DAMAGE_PER_GARBAGE: 5,        // 5ダメージごとに1行
+    MAX_GARBAGE: 8,               // 最大8行
+
+    // === ロックディレイ ===
+    LOCK_DELAY_MS: 750,           // 旧500 → 750ms (+250ms)
+    LOCK_MAX_RESETS: 15,
+    LOCK_TOTAL_MAX_MS: 2500,      // 旧2000 → 2500ms
+
+    // === ソフトドロップ ===
+    SOFT_DROP_FACTOR: 0.077,      // 旧0.1 → 0.077（+30%遅く=0.1/1.3）
+
+    // === ライン消去アニメーション ===
+    LINE_CLEAR_DURATION: 250,     // 0.25秒
+
+    // === 戦闘結果表示 ===
+    BATTLE_RESULT_DURATION: 5000, // 5秒
+    VICTORY_WAIT_DURATION: 3000,  // 勝利後、戦闘画面を3秒間表示してからリザルトへ
+
+    // === 戦闘報酬（恒久強化）===
+    VICTORY_PERM_ATK: 1,          // 勝利時恒久ATK+1
+    VICTORY_PERM_DEF: 1,          // 勝利時恒久DEF+1
+    FAST_VICTORY_BONUS_ATK: 1,    // 1ラウンドで倒した場合追加ATK+1
+    FAST_VICTORY_BONUS_DEF: 0,
+
+    // === その他 ===
+    ENCOUNTER_DURATION: 1200,     // エンカウント演出時間
+};
+
+// ============================================================
+// ゲーム状態（FSM）
+// ============================================================
+const GamePhase = {
+    TITLE: 'TITLE',
+    RANKING: 'RANKING',          // ランキング画面
+    MOVE: 'MOVE',
+    EVENT: 'EVENT',              // 移動中イベント
+    EVENT_CHOICE: 'EVENT_CHOICE', // 選択肢イベント
+    ENCOUNTER: 'ENCOUNTER',
+    BATTLE_TETRIS: 'BATTLE_TETRIS',
+    AUTO_BATTLE: 'AUTO_BATTLE',
+    BATTLE_RESULT: 'BATTLE_RESULT',
+    LEVELUP_CHOICE: 'LEVELUP_CHOICE',
+    PAUSED: 'PAUSED',
+    GAMEOVER: 'GAMEOVER'
+};
+
+// ============================================================
+// サウンドマネージャー（Web Audio API）
+// ============================================================
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.initialized = false;
+        this.muted = false;
+        this.seVolume = 0.3;
+        this.bgmVolume = 0.2;
+        this.currentBgm = null;
+        this.bgmGain = null;
+        this.bgmOscillators = [];
+    }
+
+    init() {
+        if (this.initialized) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.bgmGain = this.ctx.createGain();
+            this.bgmGain.connect(this.ctx.destination);
+            this.bgmGain.gain.value = this.bgmVolume;
+            this.initialized = true;
+        } catch (e) {
+            console.warn('Web Audio API not supported');
+        }
+    }
+
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    toggleMute() {
+        this.muted = !this.muted;
+        if (this.bgmGain) {
+            this.bgmGain.gain.value = this.muted ? 0 : this.bgmVolume;
+        }
+        return this.muted;
+    }
+
+    // === 効果音 ===
+    playSE(type) {
+        if (!this.initialized || this.muted) return;
+        this.resume();
+
+        const now = this.ctx.currentTime;
+        switch (type) {
+            case 'move': this.playTone(200, 0.05, 'square', 0.15); break;
+            case 'rotate': this.playTone(300, 0.08, 'square', 0.2); break;
+            case 'softdrop': this.playTone(150, 0.03, 'square', 0.1); break;
+            case 'harddrop': this.playNoise(0.1, 0.25); this.playTone(100, 0.15, 'sawtooth', 0.3); break;
+            case 'lock': this.playTone(180, 0.1, 'triangle', 0.2); break;
+            case 'clear1': this.playClearSound(1); break;
+            case 'clear2': this.playClearSound(2); break;
+            case 'clear3': this.playClearSound(3); break;
+            case 'tetris': this.playClearSound(4); break;
+            case 'levelup': this.playLevelUp(); break;
+            case 'hold': this.playTone(400, 0.08, 'sine', 0.15); break;
+            case 'event': this.playEventJingle(); break;
+            case 'encounter': this.playEncounterJingle(); break;
+            case 'hit': this.playTone(120, 0.1, 'sawtooth', 0.2); break;
+            case 'damage': this.playTone(80, 0.15, 'sawtooth', 0.25); break;
+            case 'special': this.playSpecialSound(); break;
+            case 'victory': this.playVictoryJingle(); break;
+            case 'gameover': this.playGameOver(); break;
+        }
+    }
+
+    playTone(freq, duration, type = 'square', volume = 0.2) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume * this.seVolume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    playNoise(duration, volume = 0.2) {
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(volume * this.seVolume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        noise.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start();
+    }
+
+    playClearSound(lines) {
+        const baseFreq = 300 + lines * 100;
+        const t = this.ctx.currentTime;
+        for (let i = 0; i < lines + 1; i++) {
+            setTimeout(() => {
+                this.playTone(baseFreq + i * 80, 0.15, 'square', 0.25);
+            }, i * 60);
+        }
+    }
+
+    playLevelUp() {
+        const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+        notes.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.2, 'square', 0.25), i * 100);
+        });
+    }
+
+    playEventJingle() {
+        const notes = [440, 554, 659]; // A4, C#5, E5
+        notes.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.15, 'triangle', 0.2), i * 80);
+        });
+    }
+
+    playEncounterJingle() {
+        const notes = [220, 220, 330, 440]; // A3, A3, E4, A4
+        notes.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.12, 'sawtooth', 0.3), i * 100);
+        });
+    }
+
+    playSpecialSound() {
+        const t = this.ctx.currentTime;
+        // チャージ完了音
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                this.playTone(400 + i * 150, 0.1, 'square', 0.3);
+            }, i * 50);
+        }
+        setTimeout(() => {
+            this.playNoise(0.2, 0.4);
+            this.playTone(800, 0.3, 'sawtooth', 0.35);
+        }, 250);
+    }
+
+    playVictoryJingle() {
+        const notes = [523, 659, 784, 1047, 784, 1047]; // C E G C G C
+        notes.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.2, 'square', 0.25), i * 120);
+        });
+    }
+
+    playGameOver() {
+        const notes = [440, 415, 392, 349, 330, 294, 262];
+        notes.forEach((freq, i) => {
+            setTimeout(() => this.playTone(freq, 0.3, 'sawtooth', 0.2), i * 200);
+        });
+    }
+
+    // === BGM ===
+    stopBgm() {
+        this.bgmOscillators.forEach(osc => {
+            try { osc.stop(); } catch(e) {}
+        });
+        this.bgmOscillators = [];
+        this.currentBgm = null;
+    }
+
+    playBgm(type) {
+        if (!this.initialized || this.currentBgm === type) return;
+        this.resume();
+        this.stopBgm();
+        this.currentBgm = type;
+
+        switch (type) {
+            case 'title': this.playTitleBgm(); break;
+            case 'explore': this.playExploreBgm(); break;
+            case 'battle': this.playBattleBgm(); break;
+            case 'result': this.playResultBgm(); break;
+        }
+    }
+
+    createBgmOscillator(type, freq) {
+        const osc = this.ctx.createOscillator();
+        osc.type = type;
+        osc.frequency.value = freq;
+        osc.connect(this.bgmGain);
+        this.bgmOscillators.push(osc);
+        return osc;
+    }
+
+    playTitleBgm() {
+        // タイトル: 穏やかなアルペジオ
+        const notes = [262, 330, 392, 523, 392, 330]; // C E G C G E
+        let noteIndex = 0;
+        const playNote = () => {
+            if (this.currentBgm !== 'title') return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = notes[noteIndex];
+            gain.gain.setValueAtTime(this.bgmVolume * 0.4, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.4);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.4);
+            noteIndex = (noteIndex + 1) % notes.length;
+            setTimeout(playNote, 400);
+        };
+        playNote();
+    }
+
+    playExploreBgm() {
+        // 探索: 明るいループ
+        const melody = [392, 440, 494, 523, 494, 440, 392, 349]; // G A B C B A G F
+        const bass = [196, 196, 220, 262, 220, 196, 196, 175];
+        let noteIndex = 0;
+        const playNote = () => {
+            if (this.currentBgm !== 'explore') return;
+            // メロディ
+            const osc1 = this.ctx.createOscillator();
+            const gain1 = this.ctx.createGain();
+            osc1.type = 'triangle';
+            osc1.frequency.value = melody[noteIndex];
+            gain1.gain.setValueAtTime(this.bgmVolume * 0.3, this.ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+            osc1.connect(gain1);
+            gain1.connect(this.ctx.destination);
+            osc1.start();
+            osc1.stop(this.ctx.currentTime + 0.35);
+            // ベース
+            const osc2 = this.ctx.createOscillator();
+            const gain2 = this.ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.value = bass[noteIndex];
+            gain2.gain.setValueAtTime(this.bgmVolume * 0.25, this.ctx.currentTime);
+            gain2.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+            osc2.connect(gain2);
+            gain2.connect(this.ctx.destination);
+            osc2.start();
+            osc2.stop(this.ctx.currentTime + 0.35);
+            noteIndex = (noteIndex + 1) % melody.length;
+            setTimeout(playNote, 375);
+        };
+        playNote();
+    }
+
+    playBattleBgm() {
+        // 戦闘: アップテンポで緊張感
+        const melody = [330, 330, 392, 330, 294, 330, 392, 440];
+        const bass = [165, 165, 196, 165, 147, 165, 196, 220];
+        let noteIndex = 0;
+        let beat = 0;
+        const playNote = () => {
+            if (this.currentBgm !== 'battle') return;
+            // メロディ
+            const osc1 = this.ctx.createOscillator();
+            const gain1 = this.ctx.createGain();
+            osc1.type = 'square';
+            osc1.frequency.value = melody[noteIndex];
+            gain1.gain.setValueAtTime(this.bgmVolume * 0.25, this.ctx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);
+            osc1.connect(gain1);
+            gain1.connect(this.ctx.destination);
+            osc1.start();
+            osc1.stop(this.ctx.currentTime + 0.15);
+            // ベース（2拍ごと）
+            if (beat % 2 === 0) {
+                const osc2 = this.ctx.createOscillator();
+                const gain2 = this.ctx.createGain();
+                osc2.type = 'sawtooth';
+                osc2.frequency.value = bass[noteIndex];
+                gain2.gain.setValueAtTime(this.bgmVolume * 0.2, this.ctx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+                osc2.connect(gain2);
+                gain2.connect(this.ctx.destination);
+                osc2.start();
+                osc2.stop(this.ctx.currentTime + 0.25);
+            }
+            // ドラム風ノイズ
+            if (beat % 4 === 0) {
+                const bufferSize = this.ctx.sampleRate * 0.05;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const gain3 = this.ctx.createGain();
+                gain3.gain.setValueAtTime(this.bgmVolume * 0.3, this.ctx.currentTime);
+                gain3.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+                noise.connect(gain3);
+                gain3.connect(this.ctx.destination);
+                noise.start();
+            }
+            noteIndex = (noteIndex + 1) % melody.length;
+            beat++;
+            setTimeout(playNote, 180);
+        };
+        playNote();
+    }
+
+    playResultBgm() {
+        // リザルト: 勝利の余韻
+        const melody = [523, 659, 784, 659, 523, 659, 784, 1047];
+        let noteIndex = 0;
+        const playNote = () => {
+            if (this.currentBgm !== 'result') return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = melody[noteIndex];
+            gain.gain.setValueAtTime(this.bgmVolume * 0.35, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.5);
+            noteIndex = (noteIndex + 1) % melody.length;
+            setTimeout(playNote, 500);
+        };
+        playNote();
+    }
+}
+
+// グローバルサウンドマネージャー
+const soundManager = new SoundManager();
+
+// ============================================================
+// ユーティリティ（外部JSから参照されるため残す）
+// ============================================================
+class Random {
+    constructor(seed = Date.now()) { this.seed = seed; }
+    next() {
+        this.seed ^= this.seed << 13;
+        this.seed ^= this.seed >> 17;
+        this.seed ^= this.seed << 5;
+        return (this.seed >>> 0) / 4294967296;
+    }
+    int(min, max) { return Math.floor(this.next() * (max - min + 1)) + min; }
+    choice(arr) { return arr[Math.floor(this.next() * arr.length)]; }
+}
+const rng = new Random();
+
+// 以下のクラス・定数は外部JSファイルに移動:
+// - TetrisGame, TETRIS定数, TETROMINOS → tetris.js
+// - RPGGame, MONSTERS, EVENTS → rpg.js
+// - Game, window.onload → main.js
+</script>
+
+<!-- 外部JSファイル読み込み -->
+<script src="./tetris.js"></script>
+<script src="./rpg.js"></script>
+<script src="./main.js"></script>
+
+</body>
+</html>

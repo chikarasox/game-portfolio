@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEURAL ASCENSION</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-primate">
+
+  <!-- ========================================
+       走査線オーバーレイ（SF感の演出）
+       ======================================== -->
+  <div id="scanlines" aria-hidden="true"></div>
+
+  <!-- ========================================
+       ヘッダー：ゲームタイトルとステージ表示
+       ======================================== -->
+  <header id="game-header">
+    <h1 id="game-title">
+      <span class="glitch" data-text="NEURAL ASCENSION">NEURAL ASCENSION</span>
+    </h1>
+    <div id="stage-indicator">
+      <span id="header-stage-name">旧猿人の世界</span>
+      <span id="header-stage-subtitle">PRIMATE WORLD</span>
+    </div>
+    <button id="option-btn" type="button">OPTION</button>
+  </header>
+
+  <!-- ========================================
+       メインゲームエリア（3カラムレイアウト）
+       ======================================== -->
+  <main id="game-container">
+
+    <!-- ----------------------------------------
+         左カラム：主要数値 & クリックエリア
+         ---------------------------------------- -->
+    <section id="left-panel" class="panel">
+      <!-- 背景キャンバス（シナプスアニメーション） -->
+      <canvas id="synapse-canvas" aria-hidden="true"></canvas>
+      <!-- ひらめき残り秒数（数値の上にオーバーレイ） -->
+      <div id="inspiration-left-timer" class="hidden"></div>
+
+      <!-- バフバナー（左パネル内、横並び） -->
+      <div id="buff-banners">
+        <div id="inspiration-banner" class="hidden">
+          <span class="inspiration-icon">💡 ひらめき</span>
+          <span id="inspiration-timer">30s</span>
+        </div>
+        <div id="overclock-buff-banner" class="hidden">
+          <span class="overclock-buff-icon">🔥 OVERCLOCK</span>
+          <span id="overclock-buff-timer">3:00</span>
+        </div>
+      </div>
+
+      <!-- ニューロン数の表示 -->
+      <div id="stats-display">
+        <div class="stat-label">NEURONS</div>
+        <div id="neuron-count" class="stat-value">0</div>
+        <div class="stat-row">
+          <div>
+            <span class="stat-small-label">/click</span>
+            <span id="per-click-display" class="stat-small-value">1</span>
+          </div>
+          <div>
+            <span class="stat-small-label">auto/sec</span>
+            <span id="per-second-display" class="stat-small-value">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- クリック説明テキスト -->
+      <div id="click-description">
+        <p>脳を刺激し、ニューロンを活性化させろ</p>
+        <p>その刺激は、進化の火種となる</p>
+      </div>
+
+      <!-- クリック対象：脳コア -->
+      <div id="click-area">
+        <!-- 脳背景画像（ボタン中心に追従） -->
+        <div id="brain-bg" aria-hidden="true">
+          <img id="brain-bg-img" src="images/brain_001.png" alt="">
+        </div>
+        <button id="brain-core" type="button" aria-label="ニューロンを生成">
+          <div class="core-visual">
+            <div class="core-ring ring-3"></div>
+            <div class="core-ring ring-2"></div>
+            <div class="core-ring ring-1"></div>
+            <div class="core-inner">
+              <span id="core-emoji"></span>
+            </div>
+          </div>
+        </button>
+        <div class="click-hint">CLICK TO GENERATE</div>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------
+         中央カラム：進化ステージ & ビジュアル
+         ---------------------------------------- -->
+    <section id="center-panel" class="panel">
+      <!-- サイクル表示（周回番号+永続乗数） -->
+      <div id="cycle-display" class="hidden">
+        <span id="cycle-count-text">サイクル 1</span>
+        <span id="cycle-permanent-text">永続乗数 ×1.0</span>
+      </div>
+
+      <!-- 現在のステージ情報 -->
+      <div id="stage-info">
+        <h2 id="stage-name">旧猿人の世界</h2>
+        <p id="stage-description">
+          道具も言葉も持たない、一匹の猿。だが、その脳には無限の可能性が眠っている。
+        </p>
+      </div>
+
+      <!-- ステージ進捗タイムライン -->
+      <div id="stage-timeline">
+        <!-- JS で動的に生成 -->
+      </div>
+
+      <!-- 進化セクション -->
+      <div id="evolution-section">
+        <div id="evolution-label">次の進化まで</div>
+        <div id="evolution-progress-bar">
+          <div id="evolution-progress-fill"></div>
+        </div>
+        <div id="evolution-status">
+          <span id="evolution-current">0</span>
+          <span class="evolution-separator">/</span>
+          <span id="evolution-required">1,000</span>
+        </div>
+        <button id="evolve-btn" class="hidden" type="button">
+          ▲ 次のステージへ ▲
+        </button>
+        <!-- バフ発動通知（進化ゲージ直下） -->
+        <div id="buff-announce-container"></div>
+      </div>
+
+      <!-- サイクルセクション（最終ステージで表示） -->
+      <div id="cycle-section" class="hidden">
+        <div id="cycle-section-label">TRANSCENDENCE</div>
+        <p id="cycle-flavor">宇宙は巡る。意識は深化する。</p>
+        <div id="cycle-progress-bar">
+          <div id="cycle-progress-fill"></div>
+        </div>
+        <div id="cycle-progress-status">
+          <span id="cycle-progress-current">0</span>
+          <span class="evolution-separator">/</span>
+          <span id="cycle-progress-required">0</span>
+        </div>
+        <button id="cycle-btn" class="hidden" type="button" disabled>
+          再び、猿へ
+        </button>
+      </div>
+    </section>
+
+    <!-- ----------------------------------------
+         右カラム：アップグレード一覧
+         ---------------------------------------- -->
+    <section id="right-panel" class="panel">
+      <h2 class="panel-title">UPGRADES</h2>
+      <!-- タブ切り替え（2タブ） -->
+      <div id="upgrade-tabs">
+        <button class="tab-btn active" data-tab="enhance">強化</button>
+        <button class="tab-btn" data-tab="ability">アップグレード</button>
+      </div>
+      <!-- アップグレードリスト（JSで動的に生成） -->
+      <div id="upgrade-list">
+        <!-- .upgrade-card が動的に追加される -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ========================================
+       通知コンテナ（トースト通知用）
+       ======================================== -->
+  <div id="notification-container" aria-live="polite"></div>
+
+  <!-- アップグレードツールチップ（マウス追従） -->
+  <div id="upgrade-tooltip"></div>
+
+  <!-- ========================================
+       オフライン進行通知モーダル
+       ======================================== -->
+  <div id="offline-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>おかえりなさい</h2>
+      <p>離席中に <span id="offline-time" class="highlight">0秒</span> が経過しました</p>
+      <p>獲得ニューロン: <span id="offline-neurons" class="highlight">0</span></p>
+      <button id="offline-ok-btn" class="modal-btn" type="button">OK</button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       進化演出モーダル
+       ======================================== -->
+  <div id="evolution-modal" class="modal hidden">
+    <div class="modal-content evolution-flash">
+      <h2 class="evolution-title">▲ E V O L U T I O N ▲</h2>
+      <p id="evolution-new-stage" class="highlight"></p>
+      <p id="evolution-new-description"></p>
+      <button id="evolution-ok-btn" class="modal-btn" type="button">新たな次元へ</button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       サイクル確認モーダル
+       ======================================== -->
+  <div id="cycle-modal" class="modal hidden">
+    <div class="modal-content cycle-modal-content">
+      <h2 class="cycle-modal-title">CYCLE RESET</h2>
+      <p>全てのアップグレードがリセットされます。</p>
+      <p>永続乗数だけが、次の旅に引き継がれます。</p>
+      <p id="cycle-modal-info" class="highlight"></p>
+      <div class="cycle-modal-buttons">
+        <button id="cycle-confirm-btn" class="modal-btn" type="button">再び、猿へ</button>
+        <button id="cycle-cancel-btn" class="modal-btn modal-btn-cancel" type="button">やめる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       エンディングモーダル
+       ======================================== -->
+  <div id="ending-modal" class="modal hidden">
+    <div class="modal-content ending-modal-content">
+      <div class="ending-title">TRANSCENDENCE COMPLETE</div>
+      <div class="ending-flavor">
+        <p>あなたは多次元宇宙の果てに到達し、</p>
+        <p>すべての法則を書き換える超越存在へと至った。</p>
+        <p>転生と輪廻は、もはやあなたの意志のままに。</p>
+      </div>
+      <div class="ending-divider"></div>
+      <div class="ending-guide">
+        <p>全てのアップグレードが解放されました。</p>
+        <p>周回ごとに基礎倍率が上昇していきます。</p>
+        <p>あなたの好きなように、世界を一巡してください。</p>
+      </div>
+      <button id="ending-ok-btn" class="modal-btn" type="button">超越の先へ</button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       OPTIONモーダル
+       ======================================== -->
+  <div id="option-modal" class="modal hidden">
+    <div class="modal-content option-modal-content">
+      <h2 class="option-modal-title">OPTION</h2>
+      <div class="option-list">
+        <button id="option-stats-btn" class="option-item" type="button">統計</button>
+        <button id="option-reset-btn" class="option-item" type="button">ステージをやり直す</button>
+        <div class="option-item option-audio-section">
+          <span class="option-audio-label">音量設定</span>
+          <div class="option-audio-controls">
+            <div class="audio-control-row">
+              <span class="audio-label">BGM</span>
+              <input type="range" id="ambient-slider" min="0" max="100" value="50" class="audio-slider">
+            </div>
+            <div class="audio-control-row">
+              <span class="audio-label">SFX</span>
+              <input type="range" id="sfx-slider" min="0" max="100" value="50" class="audio-slider">
+            </div>
+            <button id="mute-btn" type="button" class="audio-mute-btn">MUTE</button>
+          </div>
+        </div>
+      </div>
+      <button id="option-close-btn" class="modal-btn" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       リセット選択モーダル
+       ======================================== -->
+  <div id="reset-modal" class="modal hidden">
+    <div class="modal-content reset-modal-content">
+      <h2 class="reset-modal-title">⟲ やり直す</h2>
+
+      <!-- ステップ1: 選択 -->
+      <div id="reset-step-select">
+        <p>どこからやり直しますか？</p>
+        <div class="reset-options">
+          <button id="reset-checkpoint-btn" class="modal-btn" type="button">
+            <span class="reset-option-label">この文明の最初から</span>
+            <span id="reset-checkpoint-stage" class="reset-option-sub"></span>
+          </button>
+          <button id="reset-full-btn" class="modal-btn modal-btn-danger" type="button">
+            <span class="reset-option-label">最初からやり直す</span>
+            <span class="reset-option-sub">全データ消去</span>
+          </button>
+          <button id="reset-cancel-btn" class="modal-btn modal-btn-cancel" type="button">キャンセル</button>
+        </div>
+      </div>
+
+      <!-- ステップ2: 完全リセット最終確認 -->
+      <div id="reset-step-confirm" class="hidden">
+        <p>セーブデータは削除され元に戻せません。</p>
+        <p class="reset-modal-sub">サイクル・永続乗数もすべてリセットされます。</p>
+        <div class="reset-modal-buttons">
+          <button id="reset-full-confirm-btn" class="modal-btn modal-btn-danger" type="button">実行する</button>
+          <button id="reset-full-cancel-btn" class="modal-btn modal-btn-cancel" type="button">やめる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       統計モーダル
+       ======================================== -->
+  <div id="stats-modal" class="modal hidden">
+    <div class="modal-content stats-modal-content">
+      <h2 class="stats-modal-title">STATISTICS</h2>
+
+      <table class="stats-table">
+        <tbody>
+          <tr class="stats-section-header"><td colspan="2">基本情報</td></tr>
+          <tr><td class="stats-label">現在のニューロン</td><td class="stats-value" id="stats-neurons">0</td></tr>
+          <tr><td class="stats-label">現周回 累計ニューロン</td><td class="stats-value" id="stats-total-neurons">0</td></tr>
+          <tr><td class="stats-label">全周回 累計ニューロン</td><td class="stats-value" id="stats-alltime-neurons">0</td></tr>
+
+          <tr class="stats-section-header"><td colspan="2">生産</td></tr>
+          <tr><td class="stats-label">クリック効率</td><td class="stats-value" id="stats-per-click">0</td></tr>
+          <tr><td class="stats-label">自動効率 /sec</td><td class="stats-value" id="stats-per-sec">0</td></tr>
+
+          <tr class="stats-section-header"><td colspan="2">プレイ統計</td></tr>
+          <tr><td class="stats-label">総クリック数</td><td class="stats-value" id="stats-total-clicks">0</td></tr>
+          <tr><td class="stats-label">OverClock 発動回数</td><td class="stats-value" id="stats-overclock-count">0</td></tr>
+          <tr><td class="stats-label">ひらめき 発動回数</td><td class="stats-value" id="stats-inspiration-count">0</td></tr>
+
+          <tr class="stats-section-header"><td colspan="2">進行状況</td></tr>
+          <tr><td class="stats-label">現在のステージ</td><td class="stats-value" id="stats-stage">-</td></tr>
+          <tr><td class="stats-label">サイクル</td><td class="stats-value" id="stats-cycle">-</td></tr>
+          <tr><td class="stats-label">永続乗数</td><td class="stats-value" id="stats-perm-mul">-</td></tr>
+
+          <tr class="stats-section-header"><td colspan="2">アップグレード</td></tr>
+          <tr><td class="stats-label">シナプスの火花</td><td class="stats-value" id="stats-synapse-count">0</td></tr>
+          <tr><td class="stats-label">本能の目覚め</td><td class="stats-value" id="stats-auto-enhance-count">0</td></tr>
+          <tr><td class="stats-label">好奇心</td><td class="stats-value" id="stats-mul-count">0</td></tr>
+          <tr><td class="stats-label">能力アップグレード</td><td class="stats-value" id="stats-ability-progress">0 / 0</td></tr>
+
+          <tr class="stats-section-header"><td colspan="2">時間</td></tr>
+          <tr><td class="stats-label">プレイ時間</td><td class="stats-value" id="stats-playtime">0秒</td></tr>
+        </tbody>
+      </table>
+
+      <button id="stats-close-btn" class="modal-btn" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ========================================
+       デバッグパネル（Dキー5連打で表示）
+       ======================================== -->
+  <div id="debug-panel" class="hidden">
+    <h3>DEBUG MODE</h3>
+    <div class="debug-section">
+      <div class="debug-label">ニューロン追加</div>
+      <div class="debug-buttons" id="debug-neuron-buttons">
+        <button type="button" data-amount="1000">+1K</button>
+        <button type="button" data-amount="1000000">+1M</button>
+        <button type="button" data-amount="1000000000">+1B</button>
+        <button type="button" data-amount="1000000000000">+1T</button>
+        <button type="button" data-amount="1000000000000000">+1Qa</button>
+        <button type="button" data-amount="1000000000000000000">+1Qi</button>
+      </div>
+    </div>
+    <div class="debug-section">
+      <div class="debug-label">ステージ移動</div>
+      <div class="debug-buttons" id="debug-stage-buttons">
+        <!-- JSで動的に生成 -->
+      </div>
+    </div>
+    <div class="debug-section">
+      <div class="debug-label">ショートカット</div>
+      <div class="debug-buttons">
+        <button type="button" id="debug-maxall-btn">全Upgrade最大購入</button>
+        <button type="button" id="debug-cycle-btn">サイクル完了条件達成</button>
+      </div>
+    </div>
+    <div class="debug-section">
+      <div class="debug-buttons">
+        <button type="button" id="debug-reset-btn">セーブデータ初期化</button>
+        <button type="button" id="debug-speed-btn">速度10倍: OFF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       サイクル達成エフェクト（全画面演出）
+       ======================================== -->
+  <div id="cycle-effect" class="hidden" aria-hidden="true">
+    <div class="conv-ripple conv-ripple-1"></div>
+    <div class="conv-ripple conv-ripple-2"></div>
+    <div class="conv-ripple conv-ripple-3"></div>
+    <div class="conv-message">
+      <div class="conv-message-main">宇宙は巡る。意識は深化する。</div>
+      <div class="conv-message-sub">TRANSCENDENCE ACHIEVED</div>
+    </div>
+  </div>
+
+  <!-- ========================================
+       クリック時のフローティングテキスト用コンテナ
+       ======================================== -->
+  <div id="floater-container" aria-hidden="true"></div>
+
+  <!-- オーディオエンジン -->
+  <script src="audio.js"></script>
+  <!-- ゲームロジック（純粋関数） -->
+  <script src="gameLogic.js"></script>
+  <!-- メインスクリプト -->
+  <script src="main.js"></script>
+</body>
+</html>

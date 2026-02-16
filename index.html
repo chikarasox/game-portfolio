@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Portfolio</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 3rem 1rem 2rem;
+      background: linear-gradient(180deg, #1a1a2e 0%, #0a0a0f 100%);
+    }
+
+    header h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #e94560, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: #888;
+      font-size: 1.05rem;
+    }
+
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .game-card {
+      display: block;
+      background: #14141f;
+      border-radius: 12px;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid #1e1e30;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      opacity: 0;
+      animation: fadeInUp 0.4s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .game-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 32px rgba(233, 69, 96, 0.15);
+      border-color: #e94560;
+    }
+
+    .game-card .thumb {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .game-card .info {
+      padding: 1rem 1.2rem 1.2rem;
+    }
+
+    .game-card .info h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 0.4rem;
+    }
+
+    .game-card .info p {
+      font-size: 0.9rem;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    .status {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: #666;
+      font-size: 1rem;
+      grid-column: 1 / -1;
+    }
+
+    .status.error { color: #e94560; }
+
+    #sentinel {
+      height: 1px;
+    }
+
+    .load-indicator {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #444;
+      font-size: 0.85rem;
+      border-top: 1px solid #1a1a2e;
+      margin-top: 2rem;
+    }
+
+    @media (max-width: 960px) {
+      .game-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.8rem; }
+      .game-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+        gap: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Chikarasox Game Portfolio</h1>
+    <p>自作ブラウザゲーム集</p>
+  </header>
+
+  <main>
+    <div class="game-grid" id="gameGrid">
+      <div class="status" id="status">読み込み中...</div>
+    </div>
+    <div id="sentinel"></div>
+    <div class="load-indicator" id="loadIndicator" style="display:none">読み込み中...</div>
+  </main>
+
+  <footer>&copy; 2026 Chikarasox Game Portfolio</footer>
+
+  <script>
+    // --- 設定 ---
+    const MAX_SCAN = 50;   // game1〜game50まで自動検出
+    const PAGE_SIZE = 12;  // 1回に表示する件数（3列×4行）
+
+    // --- 状態 ---
+    let allGames = [];
+    let displayedCount = 0;
+    let loading = false;
+
+    // サムネイル推奨サイズ: 960×540 (16:9)
+    // meta.json に "thumbnail": "thumb.png" を指定すると画像表示
+    // 未指定の場合は "emoji" フィールドの絵文字を表示
+
+    function createCard(game, index) {
+      const card = document.createElement('a');
+      card.href = `${game.dir}/`;
+      card.className = 'game-card';
+      card.style.animationDelay = `${(index % PAGE_SIZE) * 0.05}s`;
+
+      const thumbContent = game.thumbnail
+        ? `<img src="${game.dir}/${game.thumbnail}" alt="${game.title}" loading="lazy">`
+        : `<span>${game.emoji || '🎮'}</span>`;
+
+      card.innerHTML = `
+        <div class="thumb" style="background: ${game.color || '#1a1a2e'}">
+          ${thumbContent}
+        </div>
+        <div class="info">
+          <h3>${game.title}</h3>
+          <p>${game.description || ''}</p>
+        </div>
+      `;
+      return card;
+    }
+
+    function renderNextPage() {
+      if (loading || displayedCount >= allGames.length) return;
+
+      const grid = document.getElementById('gameGrid');
+      const nextBatch = allGames.slice(displayedCount, displayedCount + PAGE_SIZE);
+
+      nextBatch.forEach((game, i) => {
+        grid.appendChild(createCard(game, i));
+      });
+
+      displayedCount += nextBatch.length;
+
+      // 全件表示済みならsentinelを非表示
+      if (displayedCount >= allGames.length) {
+        document.getElementById('sentinel').style.display = 'none';
+        document.getElementById('loadIndicator').style.display = 'none';
+      }
+    }
+
+    async function discoverGames() {
+      const results = await Promise.all(
+        Array.from({ length: MAX_SCAN }, (_, i) => {
+          const dir = `game${i + 1}`;
+          return fetch(`${dir}/meta.json`)
+            .then(r => r.ok ? r.json().then(meta => ({ dir, ...meta })) : null)
+            .catch(() => null);
+        })
+      );
+      return results.filter(Boolean);
+    }
+
+    async function init() {
+      const grid = document.getElementById('gameGrid');
+      const status = document.getElementById('status');
+
+      try {
+        allGames = await discoverGames();
+
+        if (allGames.length === 0) {
+          status.textContent = 'ゲームが見つかりません';
+          return;
+        }
+
+        // ステータス表示を消して最初のページを描画
+        status.remove();
+        renderNextPage();
+
+        // スクロールで追加読み込み（IntersectionObserver）
+        if (displayedCount < allGames.length) {
+          const sentinel = document.getElementById('sentinel');
+          const indicator = document.getElementById('loadIndicator');
+
+          const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && displayedCount < allGames.length) {
+              indicator.style.display = 'block';
+              // 少し遅延させて読み込み感を出す
+              setTimeout(() => {
+                renderNextPage();
+                if (displayedCount >= allGames.length) {
+                  observer.disconnect();
+                }
+              }, 300);
+            }
+          }, { rootMargin: '200px' });
+
+          observer.observe(sentinel);
+        }
+      } catch (e) {
+        status.textContent = 'ゲームの読み込みに失敗しました';
+        status.classList.add('error');
+        console.error(e);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

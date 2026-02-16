@@ -1,0 +1,13 @@
+{
+  "name": "neural-ascension",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  }
+}
