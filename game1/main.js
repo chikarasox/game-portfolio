@@ -1066,6 +1066,7 @@ function tickInspirationBuff() {
     gameState.inspirationEndTime = now + cfg.durationSec * 1000;
     gameState.totalInspirationCount++;
     triggerInspirationVisualEffect();
+    audioManager.playBuffChoirSfx("inspiration");
     showBuffAnnounce(`💡 ひらめき発動！ 全生産 +${(cfg.buffPct || 160) - 100}% (${cfg.durationSec}秒)`, "#ffcc00");
   }
 }
@@ -1141,6 +1142,7 @@ function purchaseOverclockBuff() {
   gameState.overclockBuffPurchaseCount = (gameState.overclockBuffPurchaseCount || 0) + 1;
 
   audioManager.playPurchaseSfx();
+  audioManager.playBuffChoirSfx("overclock");
   triggerOverclockBuffVisualEffect();
   showBuffAnnounce(`🔥 OverClock発動！ 全生産 ×${((cfg.buffPct || 250) / 100).toFixed(1)} (${Math.floor((cfg.durationSec || 180) / 60)}分)`, "#ff3333");
 

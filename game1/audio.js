@@ -389,6 +389,92 @@ class AudioManager {
   }
 
   // ========================================
+  // バフ発動コーラスSFX
+  // ========================================
+
+  playBuffChoirSfx(type) {
+    if (!this.initialized) return;
+    const now = this.ctx.currentTime;
+
+    // ひらめき: 明るい長三和音(C4-E4-G4), OverClock: 力強い短三和音+5度(C3-Eb3-G3-C4)
+    const chords = {
+      inspiration: [261.63, 329.63, 392.00, 523.25],
+      overclock:   [130.81, 155.56, 196.00, 261.63],
+    };
+    const notes = chords[type] || chords.inspiration;
+    const duration = type === "overclock" ? 3.5 : 3.0;
+    const gain = type === "overclock" ? 0.10 : 0.08;
+
+    // フォルマントフィルタ（"aah"母音の近似: F1≈800Hz, F2≈1200Hz）
+    const formant1 = this.ctx.createBiquadFilter();
+    formant1.type = "bandpass";
+    formant1.frequency.value = 800;
+    formant1.Q.value = 5;
+
+    const formant2 = this.ctx.createBiquadFilter();
+    formant2.type = "bandpass";
+    formant2.frequency.value = 1200;
+    formant2.Q.value = 5;
+
+    const formantMix = this.ctx.createGain();
+    formantMix.gain.value = 1.0;
+
+    // リバーブ用のコンボルバ（コーラス専用の長い残響）
+    const choirReverb = this.ctx.createConvolver();
+    choirReverb.buffer = this._createImpulseResponse(3, 2.5);
+    const reverbGain = this.ctx.createGain();
+    reverbGain.gain.value = 0.4;
+
+    // マスターエンベロープ（ゆっくり立ち上がり、長いサスティン、フェードアウト）
+    const masterEnv = this.ctx.createGain();
+    masterEnv.gain.setValueAtTime(0, now);
+    masterEnv.gain.linearRampToValueAtTime(gain, now + 0.8);
+    masterEnv.gain.setValueAtTime(gain, now + duration - 1.5);
+    masterEnv.gain.linearRampToValueAtTime(0.001, now + duration);
+
+    // 各音程に対してデチューンした複数ボイスを生成
+    const allOscs = [];
+    for (const freq of notes) {
+      // 1音程あたり3ボイス（微妙にデチューン）
+      const detunes = [-6, 0, 6];
+      for (const dt of detunes) {
+        const osc = this.ctx.createOscillator();
+        osc.type = "sawtooth";
+        osc.frequency.value = freq;
+        osc.detune.value = dt + (Math.random() - 0.5) * 4;
+
+        // ビブラート（LFO）
+        const vibLfo = this.ctx.createOscillator();
+        vibLfo.type = "sine";
+        vibLfo.frequency.value = 4.5 + Math.random() * 1.5;
+        const vibDepth = this.ctx.createGain();
+        vibDepth.gain.value = 3;
+        vibLfo.connect(vibDepth);
+        vibDepth.connect(osc.frequency);
+
+        // フォルマントフィルタへ分岐
+        osc.connect(formant1);
+        osc.connect(formant2);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.5);
+        vibLfo.start(now);
+        vibLfo.stop(now + duration + 0.5);
+        allOscs.push(osc, vibLfo);
+      }
+    }
+
+    // シグナルチェーン: フォルマント → ミックス → エンベロープ → SFXバス + リバーブ
+    formant1.connect(formantMix);
+    formant2.connect(formantMix);
+    formantMix.connect(masterEnv);
+    masterEnv.connect(this.sfxBus);
+    masterEnv.connect(choirReverb);
+    choirReverb.connect(reverbGain);
+    reverbGain.connect(this.sfxBus);
+  }
+
+  // ========================================
   // 内部: バッファ生成
   // ========================================
 
