@@ -401,6 +401,7 @@ button.option-item:hover {
 #neuron-count {
   font-size: var(--neuron-font-size, 2rem);
   display: inline-block;
+  font-variant-numeric: tabular-nums;
 }
 
 #neuron-count.bumping {
@@ -776,11 +777,26 @@ button.option-item:hover {
 #evolution-status {
   font-size: 0.8rem;
   color: var(--text-primary);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+#evolution-current {
+  display: block;
 }
 
 .evolution-separator {
-  margin: 0 4px;
+  display: none;
+}
+
+#evolution-required {
+  display: block;
+  font-size: 0.7rem;
   color: var(--text-secondary);
+}
+
+#evolution-required::before {
+  content: "/ ";
 }
 
 /* 進化ボタン */

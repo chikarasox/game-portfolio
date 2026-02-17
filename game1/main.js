@@ -1865,7 +1865,8 @@ function updateUpgradeList() {
       ocBuffCard.classList.remove("affordable", "too-expensive", "active-buff");
       if (isActive) {
         ocBuffCard.classList.add("active-buff");
-        if (costEl) costEl.textContent = "稼働中";
+        const nextCost = calculateOverclockBuffCost();
+        if (costEl) costEl.textContent = nextCost > 0n ? `稼働中 ｜ 次回 ◆ ${formatBigInt(nextCost)}` : "稼働中";
       } else {
         const cost = calculateOverclockBuffCost();
         if (cost === 0n) { ocBuffCard.classList.add("too-expensive"); if (costEl) costEl.textContent = "利用不可"; }
@@ -2203,7 +2204,7 @@ function showBuffAnnounce(message, color) {
 
 function saveGame() {
   const saveData = {
-    version: 2,
+    version: 3,
     neurons: gameState.neurons.toString(),
     totalNeurons: gameState.totalNeurons.toString(),
     stageNeurons: gameState.stageNeurons.toString(),
@@ -2236,9 +2237,9 @@ function loadGame() {
     const data = JSON.parse(savedStr);
 
     // 旧バージョン検出
-    if (!data.version || data.version < 2) {
+    if (!data.version || data.version < 3) {
       setTimeout(() => {
-        showNotification("ゲームがリニューアルされました！ データをリセットします。");
+        showNotification("ゲームバランスが大幅に更新されました！ データをリセットします。");
         localStorage.removeItem(SAVE_KEY);
         localStorage.removeItem(CHECKPOINT_KEY);
       }, 500);

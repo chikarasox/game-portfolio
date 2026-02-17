@@ -1,10 +1,10 @@
 {
   "config": {
     "stageThreshold": [
-      "0", "100000", "1000000", "5000000", "10000000",
-      "30000000", "100000000", "500000000"
+      "0", "100000", "5000000", "250000000", "5000000000",
+      "150000000000", "4500000000000", "135000000000000"
     ],
-    "stageMultiplier": [100, 110, 120, 140, 160, 185, 215, 250],
+    "stageMultiplier": [100, 500, 5000, 50000, 500000, 5000000, 50000000, 500000000],
     "inspirationBuff": {
       "cooldownSec": 45,
       "lotteryPctPerSec": 5,
@@ -15,9 +15,9 @@
       "durationSec": 180,
       "buffPct": 250,
       "baseCostByStage": [
-        "10000", "100000", "500000", "1000000",
-        "3000000", "10000000",
-        "50000000", "100000000"
+        "10000", "500000", "25000000", "500000000",
+        "15000000000", "500000000000",
+        "25000000000000", "1250000000000000"
       ],
       "costGrowthBase": 1.5,
       "stageData": [
@@ -34,7 +34,7 @@
     "cycleSystem": {
       "permanentMultiplierBase": 0.6,
       "thresholdGrowthBase": 1.1,
-      "cycleThreshold": "1000000000"
+      "cycleThreshold": "4050000000000000"
     }
   },
 
@@ -68,7 +68,7 @@
       "name": "農耕文明",
       "subtitle": "AGRICULTURAL CIVILIZATION",
       "description": "ホモ・サピエンスが世界の覇権を握る。\n長い苦難の幕開けでもある。",
-      "requiredTotalNeurons": "1000000",
+      "requiredTotalNeurons": "5000000",
       "themeClass": "theme-agricultural",
       "accentColor": "#c4960a",
       "coreEmoji": "🌾",
@@ -80,7 +80,7 @@
       "name": "産業革命",
       "subtitle": "INDUSTRIAL REVOLUTION",
       "description": "蒸気が唸り、鉄が軋む。\\n人類は自然の法則を従え始めた。",
-      "requiredTotalNeurons": "5000000",
+      "requiredTotalNeurons": "250000000",
       "themeClass": "theme-industrial",
       "accentColor": "#ff6633",
       "coreEmoji": "⚙️",
@@ -92,7 +92,7 @@
       "name": "デジタル意識",
       "subtitle": "DIGITAL CONSCIOUSNESS",
       "description": "電子の海を泳ぐ知性。\\nシリコンの中に、新たな精神が目覚める。",
-      "requiredTotalNeurons": "10000000",
+      "requiredTotalNeurons": "5000000000",
       "themeClass": "theme-digital",
       "accentColor": "#00d4ff",
       "coreEmoji": "💻",
@@ -104,7 +104,7 @@
       "name": "人工超知性",
       "subtitle": "ARTIFICIAL SUPERINTELLIGENCE",
       "description": "人類は、再び進化の道を歩み始める。\\nもはや個と社会の境界は存在しない。",
-      "requiredTotalNeurons": "30000000",
+      "requiredTotalNeurons": "150000000000",
       "themeClass": "theme-superintelligence",
       "accentColor": "#00ffcc",
       "coreEmoji": "🤖",
@@ -116,7 +116,7 @@
       "name": "宇宙意識",
       "subtitle": "COSMIC AWARENESS",
       "description": "肉体を捨て、星々の間に意識を広げる。\\n銀河が一つの思考回路となる。",
-      "requiredTotalNeurons": "100000000",
+      "requiredTotalNeurons": "4500000000000",
       "themeClass": "theme-cosmic",
       "accentColor": "#9966ff",
       "coreEmoji": "🌌",
@@ -128,7 +128,7 @@
       "name": "超越",
       "subtitle": "TRANSCENDENCE",
       "description": "次元の壁を超え、存在の根源に触れる。\\n人類は宇宙の法則そのものとなる。",
-      "requiredTotalNeurons": "500000000",
+      "requiredTotalNeurons": "135000000000000",
       "themeClass": "theme-transcendence",
       "accentColor": "#ffffff",
       "coreEmoji": "✦",
@@ -181,7 +181,7 @@
       "id": "synapse_enhance_2",
       "name": "シナプス強化 II",
       "description": "高速伝達回路の確立。クリック力がさらに向上する。",
-      "cost": "800000",
+      "cost": "15000000",
       "target": "click",
       "multiplier": 125,
       "requires": "synapse_enhance_1"
@@ -190,7 +190,7 @@
       "id": "synapse_enhance_3",
       "name": "シナプス強化 III",
       "description": "並列処理シナプスの構築。クリック力の飛躍的向上。",
-      "cost": "2000000",
+      "cost": "750000000",
       "target": "click",
       "multiplier": 125,
       "requires": "synapse_enhance_2"
@@ -199,7 +199,7 @@
       "id": "synapse_enhance_4",
       "name": "シナプス強化 IV",
       "description": "超高速ニューラルバスの実装。クリック力が極限に近づく。",
-      "cost": "8000000",
+      "cost": "40000000000",
       "target": "click",
       "multiplier": 125,
       "requires": "synapse_enhance_3"
@@ -208,7 +208,7 @@
       "id": "synapse_enhance_5",
       "name": "シナプス強化 V",
       "description": "量子シナプスの覚醒。クリック力の究極形態。",
-      "cost": "40000000",
+      "cost": "2000000000000",
       "target": "click",
       "multiplier": 125,
       "requires": "synapse_enhance_4"
@@ -226,7 +226,7 @@
       "id": "auto_enhance_2",
       "name": "自動回路強化 II",
       "description": "反射弧の最適化。自動生産がさらに向上する。",
-      "cost": "1000000",
+      "cost": "20000000",
       "target": "auto",
       "multiplier": 125,
       "requires": "auto_enhance_1"
@@ -235,7 +235,7 @@
       "id": "auto_enhance_3",
       "name": "自動回路強化 III",
       "description": "自律神経ネットワークの拡張。自動生産の飛躍的向上。",
-      "cost": "2500000",
+      "cost": "1000000000",
       "target": "auto",
       "multiplier": 125,
       "requires": "auto_enhance_2"
@@ -244,7 +244,7 @@
       "id": "auto_enhance_4",
       "name": "自動回路強化 IV",
       "description": "完全自律型思考エンジンの起動。自動生産が極限に近づく。",
-      "cost": "10000000",
+      "cost": "50000000000",
       "target": "auto",
       "multiplier": 125,
       "requires": "auto_enhance_3"
@@ -253,7 +253,7 @@
       "id": "auto_enhance_5",
       "name": "自動回路強化 V",
       "description": "宇宙規模の自動処理網。自動生産の究極形態。",
-      "cost": "50000000",
+      "cost": "2500000000000",
       "target": "auto",
       "multiplier": 125,
       "requires": "auto_enhance_4"
@@ -271,7 +271,7 @@
       "id": "mul_enhance_2",
       "name": "好奇心の深化 II",
       "description": "抽象的思考の発達。全体乗数効果がさらに向上する。",
-      "cost": "1500000",
+      "cost": "30000000",
       "target": "multiplier",
       "multiplier": 125,
       "requires": "mul_enhance_1"
@@ -280,7 +280,7 @@
       "id": "mul_enhance_3",
       "name": "好奇心の深化 III",
       "description": "メタ認知の獲得。全体乗数効果の飛躍的向上。",
-      "cost": "4000000",
+      "cost": "1500000000",
       "target": "multiplier",
       "multiplier": 125,
       "requires": "mul_enhance_2"
@@ -289,7 +289,7 @@
       "id": "mul_enhance_4",
       "name": "好奇心の深化 IV",
       "description": "超越的直観の発現。全体乗数効果が極限に近づく。",
-      "cost": "15000000",
+      "cost": "75000000000",
       "target": "multiplier",
       "multiplier": 125,
       "requires": "mul_enhance_3"
@@ -298,7 +298,7 @@
       "id": "mul_enhance_5",
       "name": "好奇心の深化 V",
       "description": "宇宙の真理への到達。全体乗数効果の究極形態。",
-      "cost": "80000000",
+      "cost": "4000000000000",
       "target": "multiplier",
       "multiplier": 125,
       "requires": "mul_enhance_4"
@@ -307,7 +307,7 @@
       "id": "synapse_release",
       "name": "シナプス 解放",
       "description": "神経伝達は限界を超えた。",
-      "cost": "200000000",
+      "cost": "100000000000000",
       "target": "click",
       "releaseMultiplier": 400,
       "requires": "synapse_enhance_5",
@@ -317,7 +317,7 @@
       "id": "auto_release",
       "name": "自律回路 解放",
       "description": "思考は自らを駆動し始める。",
-      "cost": "250000000",
+      "cost": "125000000000000",
       "target": "auto",
       "releaseMultiplier": 400,
       "requires": "auto_enhance_5",
@@ -327,7 +327,7 @@
       "id": "mul_release",
       "name": "知性 解放",
       "description": "好奇心は、存在そのものを書き換える。",
-      "cost": "300000000",
+      "cost": "150000000000000",
       "target": "multiplier",
       "releaseMultiplier": 400,
       "requires": "mul_enhance_5",

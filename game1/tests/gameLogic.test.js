@@ -6,7 +6,7 @@ import GameLogic from "../gameLogic.js";
 
 // テスト用の config オブジェクト（v2版）
 const testConfig = {
-  stageMultiplier: [100, 110, 120, 140, 160, 185, 215, 250],
+  stageMultiplier: [100, 500, 5000, 50000, 500000, 5000000, 50000000, 500000000],
   cycleSystem: {
     permanentMultiplierBase: 0.6,
     thresholdGrowthBase: 1.1,
@@ -26,9 +26,9 @@ describe("calculateFinalClick", () => {
   });
 
   it("ステージ乗数が正しく適用される", () => {
-    // ステージ1: mult=110 → 100 * 110/100 = 110
+    // ステージ1: mult=500 → 100 * 500/100 = 500
     const s1 = GameLogic.calculateFinalClick(base, 1, 100, 100, 100, testConfig);
-    expect(s1).toBe(110n);
+    expect(s1).toBe(500n);
   });
 
   it("サイクル永続乗数が正しく適用される", () => {
@@ -44,10 +44,10 @@ describe("calculateFinalClick", () => {
   });
 
   it("全修飾子の積み重ね", () => {
-    // stage1(110%) + cycle(160/100) + buff(250)
-    // 100 * 110/100 * 160/100 * 250/100 = 440
+    // stage1(500%) + cycle(160/100) + buff(250)
+    // 100 * 500/100 * 160/100 * 250/100 = 2000
     const result = GameLogic.calculateFinalClick(base, 1, 160, 100, 250, testConfig);
-    expect(result).toBe(440n);
+    expect(result).toBe(2000n);
   });
 
   it("最小値は1n", () => {
@@ -78,9 +78,9 @@ describe("calculateFinalNps", () => {
   });
 
   it("ステージ乗数が正しく適用される", () => {
-    // ステージ2: mult=120 → 100 * 120/100 = 120
+    // ステージ2: mult=5000 → 100 * 5000/100 = 5000
     const s2 = GameLogic.calculateFinalNps(base, 2, 100, 100, 100, testConfig);
-    expect(s2).toBe(120n);
+    expect(s2).toBe(5000n);
   });
 
   it("サイクル乗数+バフの組み合わせ", () => {
@@ -171,7 +171,7 @@ describe("getCycleScaledThreshold", () => {
 describe("統合テスト: ステージ別生産量", () => {
   it("全ステージで正しい乗数が適用される", () => {
     const base = 1000n;
-    const expected = [1000n, 1100n, 1200n, 1400n, 1600n, 1850n, 2150n, 2500n];
+    const expected = [1000n, 5000n, 50000n, 500000n, 5000000n, 50000000n, 500000000n, 5000000000n];
 
     for (let i = 0; i < expected.length; i++) {
       const result = GameLogic.calculateFinalClick(base, i, 100, 100, 100, testConfig);
