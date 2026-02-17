@@ -937,6 +937,25 @@ button.option-item:hover {
   color: var(--text-dim);
   text-align: center;
   margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+#cycle-progress-current {
+  display: block;
+}
+
+#cycle-progress-status .evolution-separator {
+  display: none;
+}
+
+#cycle-progress-required {
+  display: block;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+#cycle-progress-required::before {
+  content: "/ ";
 }
 
 #cycle-btn {
